@@ -1,184 +1,234 @@
-# Storj Cloud Client Applications
+# Storj Cloud Python Client
 
-Client applications for Storj node operators to automatically discover and sync node data with the [Storj Cloud monitoring dashboard](https://storj.cloud).
-
-## Overview
-
-This repository contains client-side applications that:
-- 🔍 **Auto-discover** Storj nodes on your servers
-- 📊 **Sync real-time data** with your Storj Cloud dashboard
-- 🔐 **Authenticate securely** with your dashboard account
-- 🎯 **Zero-config setup** for most common node configurations
-
-## Client Applications
-
-### Node Discovery Client
-- **Purpose**: Scan servers for Storj nodes and register them automatically
-- **Supports**: Multiple nodes per server, custom dashboard ports
-- **Detection**: Auto-detects common ports (14000-14005, 15000-15005)
-- **Authentication**: Uses API tokens from your Storj Cloud account
-
-### Node Sync Daemon
-- **Purpose**: Continuous monitoring and data synchronization
-- **Features**: Real-time metrics, earnings tracking, alert forwarding
-- **Deployment**: Runs as system service or Docker container
-- **Frequency**: Configurable sync intervals (default: 5 minutes)
-
-## Quick Start
-
-### 1. Get Your API Token
-1. Login to [https://storj.cloud](https://storj.cloud)
-2. Go to **Settings** → **API Tokens**
-3. Generate a new token with **Node Management** permissions
-
-### 2. Install Client
-```bash
-# Download latest client
-wget https://github.com/ElektryonUK/storjcloud-client/releases/latest/download/storjcloud-client-linux
-chmod +x storjcloud-client-linux
-
-# Or use Docker
-docker pull elektryonuk/storjcloud-client:latest
-```
-
-### 3. Discover Nodes
-```bash
-# Auto-discover all nodes on current server
-./storjcloud-client-linux discover --token YOUR_API_TOKEN
-
-# Custom port range
-./storjcloud-client-linux discover --token YOUR_API_TOKEN --ports 14000,14001,14002,14003
-
-# Specific server IP
-./storjcloud-client-linux discover --token YOUR_API_TOKEN --server 192.168.1.100
-```
-
-### 4. Start Monitoring
-```bash
-# Start sync daemon
-./storjcloud-client-linux sync --token YOUR_API_TOKEN --interval 300s
-
-# Install as system service
-sudo ./storjcloud-client-linux install-service
-```
+Python client application for Storj node operators to automatically discover and sync node data with the [Storj Cloud monitoring dashboard](https://storj.cloud).
 
 ## Features
 
-### ✅ Auto-Discovery
-- Scans common Storj dashboard ports
-- Detects node ID, version, and configuration
-- Validates node accessibility and API responses
-- Supports multiple nodes per server
+- 🐳 **Docker Integration** - Auto-discovers Storj nodes from Docker containers
+- 🔍 **Port Detection** - Finds dashboard ports from container mappings and env vars
+- 🔐 **Secure Authentication** - API token-based auth with your dashboard
+- 📊 **Real-time Sync** - Continuous monitoring with configurable intervals
+- ⚡ **PM2 Integration** - Runs as managed service with auto-restart
+- 🐧 **Cross-platform** - Linux, Windows, macOS support
 
-### ✅ Real-Time Monitoring
-- Disk usage and availability
-- Bandwidth utilization
-- Earnings and payouts
-- Satellite connections
-- Audit scores and uptime
+## Quick Setup
 
-### ✅ Secure Authentication
-- API token-based authentication
-- Encrypted communication with dashboard
-- No stored credentials on local system
-- Revokable access tokens
+### Automated Installation
+```bash
+# Download and run setup script
+wget https://raw.githubusercontent.com/ElektryonUK/storjcloud-client/main/setup.sh
+chmod +x setup.sh
+sudo ./setup.sh
+```
 
-### ✅ Multi-Platform Support
-- Linux (x64, ARM64)
-- Windows (x64)
-- macOS (Intel, Apple Silicon)
-- Docker containers
+### Manual Installation
+```bash
+# Clone repository
+git clone https://github.com/ElektryonUK/storjcloud-client.git
+cd storjcloud-client
+
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Install PM2 (if not already installed)
+npm install -g pm2
+
+# Make executable
+chmod +x storjcloud-client.py
+```
+
+## Usage
+
+### 1. Get API Token
+1. Login to [https://storj.cloud](https://storj.cloud)
+2. Go to **Settings** → **API Tokens**
+3. Generate token with **Node Management** permissions
+
+### 2. Discover Nodes
+
+#### From Docker (Recommended)
+```bash
+# Auto-discover from Docker containers
+./storjcloud-client.py discover --token YOUR_TOKEN --from-docker
+
+# Discover from Docker on remote host
+./storjcloud-client.py discover --token YOUR_TOKEN --from-docker --docker-host tcp://192.168.1.100:2375
+```
+
+#### Custom Port Scanning
+```bash
+# Specific ports
+./storjcloud-client.py discover --token YOUR_TOKEN --ports 14000,14001,14002,14003
+
+# Port range
+./storjcloud-client.py discover --token YOUR_TOKEN --port-range 14000-14005
+
+# Auto-detect common ports
+./storjcloud-client.py discover --token YOUR_TOKEN --auto
+```
+
+### 3. Start Monitoring Service
+
+#### Using PM2 (Recommended)
+```bash
+# Install as PM2 service
+./storjcloud-client.py install-service --token YOUR_TOKEN
+
+# Start service
+pm2 start storjcloud-sync
+
+# Check status
+pm2 status
+pm2 logs storjcloud-sync
+```
+
+#### Direct Sync
+```bash
+# Start sync daemon
+./storjcloud-client.py sync --token YOUR_TOKEN --interval 300
+```
 
 ## Configuration
 
 ### Environment Variables
 ```bash
-STORJCLOUD_API_TOKEN=your_api_token_here
-STORJCLOUD_DASHBOARD_URL=https://storj.cloud
-STORJCLOUD_SYNC_INTERVAL=300s
-STORJCLOUD_LOG_LEVEL=info
+export STORJCLOUD_API_TOKEN="your_token_here"
+export STORJCLOUD_DASHBOARD_URL="https://storj.cloud"
+export STORJCLOUD_SYNC_INTERVAL="300"
+export STORJCLOUD_LOG_LEVEL="info"
+export DOCKER_HOST="unix:///var/run/docker.sock"  # or tcp://host:2375
 ```
 
 ### Config File
 ```yaml
-# ~/.config/storjcloud/client.yaml
+# ~/.storjcloud/config.yaml
 api:
-  token: "your_api_token_here"
+  token: "your_token_here"
   endpoint: "https://storj.cloud/api/v1"
-  timeout: 30s
+  timeout: 30
 
 discovery:
-  ports: [14000, 14001, 14002, 14003, 14004, 14005]
-  timeout: 5s
+  from_docker: true
+  docker_host: "unix:///var/run/docker.sock"
+  custom_ports: [14000, 14001, 14002, 14003]
+  port_range: [14000, 14010]
+  timeout: 5
   retry_attempts: 3
 
 sync:
-  interval: 300s
+  interval: 300
   batch_size: 10
   retry_failed: true
 
 logging:
-  level: info
+  level: "info"
   file: "/var/log/storjcloud-client.log"
+```
+
+## Docker Discovery
+
+The client automatically discovers Storj nodes by:
+
+1. **Container Detection** - Finds containers with `storjlabs/storagenode` image
+2. **Port Mapping** - Resolves host ports mapped to container port 14002
+3. **Environment Parsing** - Reads `CONSOLE_ADDRESS` for custom dashboard ports
+4. **API Validation** - Probes `/api/sno` endpoint to confirm node accessibility
+5. **Metadata Extraction** - Gets node ID, version, and status information
+
+## PM2 Service Management
+
+```bash
+# Service lifecycle
+pm2 start storjcloud-sync    # Start service
+pm2 stop storjcloud-sync     # Stop service
+pm2 restart storjcloud-sync  # Restart service
+pm2 delete storjcloud-sync   # Remove service
+
+# Monitoring
+pm2 status                   # Service status
+pm2 logs storjcloud-sync     # View logs
+pm2 monit                    # Real-time monitoring
+
+# Persistence
+pm2 save                     # Save current processes
+pm2 startup                  # Setup auto-start on boot
 ```
 
 ## Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Storj Nodes   │◄───│ StorjCloud Client │───►│ StorjCloud API  │
-│ (Dashboard APIs)│    │   (This Repo)    │    │ (Dashboard)     │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌────────────────────┐    ┌─────────────────┐
+│  Docker Engine  │◄──┤ StorjCloud Client  ├───►│ StorjCloud API  │
+│   (Containers)  │    │   (Python + PM2)   │    │   (Dashboard)   │
+└─────────────────┘    └────────────────────┘    └─────────────────┘
          │                       │                       │
-    Port 14000-14005         HTTP Client              HTTPS API
-    Local Dashboard         Authentication            JWT Tokens
-    Real-time Data           Data Parsing            Database Storage
+    Container Info           HTTP Requests              HTTPS API
+    Port Mappings           Node Discovery            Authentication
+    Environment Vars        Data Synchronisation       Database Storage
 ```
 
 ## Development
 
-### Prerequisites
-- Go 1.21+
-- Docker (for containerized deployment)
-- Access to Storj nodes for testing
-
-### Build from Source
+### Setup Development Environment
 ```bash
 git clone https://github.com/ElektryonUK/storjcloud-client.git
 cd storjcloud-client
-go mod download
-go build -o storjcloud-client ./cmd/client
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-### Run Tests
+### Running Tests
 ```bash
-go test ./...
+pytest tests/
+pytest tests/ --cov=src/
 ```
 
-### Build Docker Image
+### Code Formatting
 ```bash
-docker build -t storjcloud-client .
+black src/
+flake8 src/
+mypy src/
 ```
 
-## Contributing
+## Troubleshooting
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Docker Permission Issues
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+# Re-login or run:
+newgrp docker
+```
 
-## License
+### API Token Issues
+```bash
+# Test token validity
+./storjcloud-client.py auth --token YOUR_TOKEN
 
-MIT License - see [LICENSE](LICENSE) file for details.
+# Generate new token at:
+https://storj.cloud/settings/api-tokens
+```
+
+### Service Issues
+```bash
+# Check PM2 logs
+pm2 logs storjcloud-sync --lines 50
+
+# Restart service
+pm2 restart storjcloud-sync
+
+# Check system resources
+pm2 monit
+```
 
 ## Support
 
 - 📧 **Email**: support@storj.cloud
-- 💬 **Discord**: [Storj Cloud Community](https://discord.gg/storjcloud)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/ElektryonUK/storjcloud-client/issues)
 - 📚 **Docs**: [https://docs.storj.cloud](https://docs.storj.cloud)
 
 ---
 
-**Made with ❤️ for the Storj community**
+**Made with 🐍 and ❤️ for the Storj community**
